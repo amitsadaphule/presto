@@ -16,9 +16,11 @@ package com.facebook.presto.redis.util;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
 import redis.embedded.RedisServer;
+import redis.embedded.exceptions.EmbeddedRedisException;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.net.ServerSocket;
 import java.net.URISyntaxException;
 
 public class EmbeddedRedis
@@ -36,7 +38,7 @@ public class EmbeddedRedis
     EmbeddedRedis()
             throws IOException, URISyntaxException
     {
-        redisServer = new RedisServer();
+        redisServer = new RedisServer(findFreePort());
     }
 
     public void start()
@@ -63,7 +65,7 @@ public class EmbeddedRedis
         try {
             redisServer.stop();
         }
-        catch (InterruptedException e) {
+        catch (EmbeddedRedisException e) {
             Thread.currentThread().interrupt();
             throw new RuntimeException(e);
         }
@@ -71,11 +73,19 @@ public class EmbeddedRedis
 
     public int getPort()
     {
-        return redisServer.getPort();
+        return redisServer.ports().get(0);
     }
 
     public String getConnectString()
     {
         return "localhost";
+    }
+
+    private static int findFreePort() throws IOException
+    {
+        ServerSocket server = new ServerSocket(0);
+        int port = server.getLocalPort();
+        server.close();
+        return port;
     }
 }
